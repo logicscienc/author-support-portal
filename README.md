@@ -5,8 +5,9 @@ A web app that helps BookLeaf's team answer author queries faster and more consi
 | | |
 |---|---|
 | **Live demo (app)** | https://author-support-portal-delta.vercel.app/ |
-| **Live API** | https://author-support-portal-v3zb.onrender.com/api (health check: `/health`) |
-| **Write-up** | see `docs/` or the file sent with the submission |
+| **Live API** | https://author-support-portal-v3zb.onrender.com/api |
+| **Health check | 	https://author-support-portal-v3zb.onrender.com/health |
+| **Write-up** | 	docs/approach-note.pdf |
 
 > **Note on the live demo:** the backend runs on a free tier that goes to sleep when unused. The first request after a pause can take up to about 50 seconds. Open the app once and give it a minute.
 
@@ -251,7 +252,7 @@ Base URL: `/api`. Send `Authorization: Bearer <token>` on every route except log
 
 - **Database:** Neon (PostgreSQL).
 - **API (Render):** root directory `server`; build command `npm install && npx prisma generate && npx prisma migrate deploy`; start command `npm start`; health check path `/health`. Environment variables as in the table above, plus `NODE_VERSION=22`.
-- **Frontend (Vercel):** root directory `frontend`; environment variable `VITE_API_URL=https://YOUR-API.onrender.com/api`. `frontend/vercel.json` rewrites every path to `index.html` so refreshing a page works.
+- **Frontend (Vercel):** root directory `frontend`; environment variable `VITE_API_URL=https://author-support-portal-v3zb.onrender.com/api`. `frontend/vercel.json` rewrites every path to `index.html` so refreshing a page works.
 - After the first deploy, set `CLIENT_ORIGIN` on the API to the Vercel address.
 
 ## Assumptions
