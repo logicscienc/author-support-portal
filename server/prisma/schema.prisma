@@ -1,0 +1,197 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  AUTHOR
+}
+
+enum BookStatus {
+  MANUSCRIPT_RECEIVED
+  EDITING
+  COVER_DESIGN
+  TYPESETTING
+  PROOFREADING
+  ISBN_ASSIGNMENT
+  PRINTING
+  DISTRIBUTION_SETUP
+  PUBLISHED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketCategory {
+  ROYALTY_PAYMENTS
+  ISBN_METADATA
+  PRINTING_QUALITY
+  DISTRIBUTION_AVAILABILITY
+  BOOK_STATUS_PRODUCTION
+  GENERAL_INQUIRY
+}
+
+enum TicketPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ActivityType {
+  CREATED
+  STATUS_CHANGED
+  CATEGORY_CHANGED
+  PRIORITY_CHANGED
+  ASSIGNED
+  REOPENED
+}
+
+enum AiStatus {
+  PENDING
+  DONE
+  FALLBACK
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(AUTHOR)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  externalId  String?   @unique
+  phone       String?
+  city        String?
+  joinedAt    DateTime?
+
+  books        Book[]
+  tickets      Ticket[]        @relation("TicketAuthor")
+  assignedTickets Ticket[]     @relation("TicketAssignee")
+  messages     TicketMessage[]
+  internalNotes InternalNote[] @relation("NoteAuthor")
+  activities   TicketActivity[] @relation("ActivityActor")
+}
+
+model Book {
+  id              String     @id @default(cuid())
+  title           String
+  isbn            String?   
+  genre           String?
+  publicationDate DateTime?
+  status          BookStatus
+  mrp             Decimal?   @db.Decimal(10, 2)
+  copiesSold      Int        @default(0)
+  totalRoyalty    Decimal    @default(0) @db.Decimal(12, 2)
+  royaltyPaid     Decimal    @default(0) @db.Decimal(12, 2)
+  royaltyPending  Decimal    @default(0) @db.Decimal(12, 2)
+  authorId        String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  royaltyPerCopy  Decimal?   @db.Decimal(10, 2)
+  lastPayoutDate  DateTime?
+  coverImageUrl  String?
+  printPartner    String?
+  availableOn     String[]   @default([])
+  externalId      String?    @unique
+
+  author          User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  tickets         Ticket[]
+
+  @@index([authorId])
+  @@index([status])
+  @@index([isbn])
+}
+
+model Ticket {
+  id                String         @id @default(cuid())
+  subject           String
+  description       String
+  status            TicketStatus   @default(OPEN)
+  category          TicketCategory  @default(GENERAL_INQUIRY)
+  priority          TicketPriority  @default(MEDIUM)
+  aiCategory        TicketCategory?
+  aiPriority        TicketPriority?
+  aiReason          String?
+  aiStatus          AiStatus        @default(PENDING)
+  aiDraft           String?
+  aiDraftUpdatedAt  DateTime?
+  assignedToId      String?
+  authorId          String
+  bookId            String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  resolvedAt        DateTime?
+  closedAt          DateTime?
+
+  author            User           @relation("TicketAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  assignedTo        User?          @relation("TicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  book              Book?          @relation(fields: [bookId], references: [id], onDelete: SetNull)
+  messages          TicketMessage[]
+  internalNotes     InternalNote[]
+  activities        TicketActivity[]
+
+  @@index([authorId, createdAt])
+  @@index([status, priority, createdAt])
+  @@index([category])
+  @@index([assignedToId])
+  @@index([bookId])
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  content   String
+  isAssisted Boolean  @default(false)
+  ticketId  String
+  senderId  String
+  createdAt DateTime @default(now())
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId, createdAt])
+}
+
+model InternalNote {
+  id        String   @id @default(cuid())
+  content   String
+  ticketId  String
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author    User     @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId, createdAt])
+}
+
+model TicketActivity {
+  id        String       @id @default(cuid())
+  type      ActivityType
+  details   Json?
+  ticketId  String
+  actorId   String?
+  createdAt DateTime     @default(now())
+
+  ticket    Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actor     User?        @relation("ActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId, createdAt])
+}
